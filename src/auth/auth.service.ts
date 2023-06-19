@@ -1,17 +1,17 @@
-import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { AUTH_MESSAGE } from 'src/constants/messages';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { IUserToken } from './models';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { AUTH_MESSAGE } from 'src/constants/messages';
-import { User } from '@prisma/client';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -19,28 +19,37 @@ export class AuthService {
     private prismaService: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
 
   private readonly _saltOrRounds = 10;
-  private readonly _accessTokenExpiresTime = '15s';
+  private readonly _accessTokenExpiresTime = '60s';
   private readonly _refreshTokenExpiresTime = 60 * 60 * 24 * 15;
+  private readonly _emailVerifycationExpiresTime = 60 * 60 * 24;
 
   async register(registerDto: RegisterDto) {
     const { email, password, ...rest } = registerDto;
 
-    const isExist = await this.prismaService.user.findUnique({
+    const user = await this.prismaService.user.findUnique({
       where: {
         email,
       },
     });
 
-    if (isExist) throw new BadRequestException(AUTH_MESSAGE.EMAIL_AVAILABLE);
+    if (user) throw new BadRequestException(AUTH_MESSAGE.EMAIL_AVAILABLE);
 
     const hashPassword = await bcrypt.hash(password, this._saltOrRounds);
 
-    await this.prismaService.user.create({
-      data: { email, password: hashPassword, ...rest },
+    const emailVerificationToken = await this.generateVerifyMailToken(email);
+
+    const newUser = await this.prismaService.user.create({
+      data: { email, password: hashPassword, emailVerificationToken, ...rest },
     });
+
+    await this.mailService.sendUserConfirmation(
+      newUser,
+      emailVerificationToken,
+    );
 
     return { message: AUTH_MESSAGE.REGISTER_SUCCESS };
   }
@@ -125,6 +134,23 @@ export class AuthService {
     return { message: 'Logged out!' };
   }
 
+  async verifyEmail(id: number, tokenUser: string, tokenParams: string) {
+    if (tokenUser !== tokenParams) {
+      throw new BadRequestException(AUTH_MESSAGE.INVALID_TOKEN);
+    }
+
+    await this.prismaService.user.update({
+      where: {
+        id,
+      },
+      data: {
+        isVerify: true,
+      },
+    });
+
+    return { message: AUTH_MESSAGE.VERIFY_EMAIL_SUCCESS };
+  }
+
   async generateToken(id: number, email: string): Promise<IUserToken> {
     const payload = { sub: id, email };
 
@@ -144,5 +170,16 @@ export class AuthService {
     ]);
 
     return { accessToken, refreshToken };
+  }
+
+  async generateVerifyMailToken(email: string): Promise<string> {
+    const payload = { email };
+
+    const emailVerificationToken = await this.jwtService.signAsync(payload, {
+      expiresIn: this._emailVerifycationExpiresTime,
+      secret: this.configService.get('JWT_MAIL_VERIFICATION_TOKEN_SECRET_KEY'),
+    });
+
+    return emailVerificationToken;
   }
 }

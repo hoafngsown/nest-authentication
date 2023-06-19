@@ -3,6 +3,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Req,
   UseGuards,
@@ -49,5 +50,14 @@ export class AuthController {
     @GetCurrentAccount('email') email: string,
   ) {
     return this.authService.refreshToken(id, email, refreshToken);
+  }
+
+  @Post('/verify/:token')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AccessTokenGuard)
+  verifyEmail(@Req() req: Request, @Param('token') tokenParams: string) {
+    const userId = req.user?.['id'] as number;
+    const userToken = req.user?.['emailVerificationToken'] as string;
+    return this.authService.verifyEmail(userId, userToken, tokenParams);
   }
 }
