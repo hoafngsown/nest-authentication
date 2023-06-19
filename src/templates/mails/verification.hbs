@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Email Verification</title>
+    <style>
+        /* CSS styling for the email template */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        p {
+            margin-bottom: 20px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Email Verification</h1>
+        <p>Dear {{username}},</p>
+        <p>Thank you for signing up! To complete your registration and verify your email address, please click on the
+            button below:</p>
+        To verify your email, visit: <{{verificationLink}}>
+        <p>If you did not sign up for this account, you can safely ignore this email.</p>
+        <p>Best regards,<br>Your Website Team</p>
+    </div>
+</body>
+
+</html>

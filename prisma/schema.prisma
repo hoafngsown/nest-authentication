@@ -8,10 +8,13 @@ datasource db {
 }
 
 model User {
-  id        Int        @id @default(autoincrement())
-  username  String     @unique
-  email     String     @unique
-  password  String
+  id                     Int     @id @default(autoincrement())
+  username               String  @unique
+  email                  String  @unique
+  password               String
+  isVerify               Boolean @default(false) @map("is_verify")
+  emailVerificationToken String? @map("email_verification_token")
+
   token     UserToken?
   firstName String?    @map("first_name")
   lastName  String?    @map("last_name")

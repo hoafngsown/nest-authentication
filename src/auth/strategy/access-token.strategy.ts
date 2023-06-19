@@ -29,7 +29,6 @@ export class AccessTokenStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
     delete user.password;
 
-    console.log({ user });
     return user;
   }
 }
